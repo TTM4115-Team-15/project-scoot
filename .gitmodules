@@ -1,0 +1,3 @@
+[submodule "app/scooter"]
+	path = app/scooter
+	url = https://github.com/TTM4115-Team-15/scooter
