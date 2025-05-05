@@ -61,7 +61,13 @@ class MQTT_Client:
 
 	def start(self, broker, port):
 		print("Connecting to {}:{}".format(broker, port))
-		self.client.connect(broker, port)
+		# self.client.connect(broker, port)
+
+		try:
+			self.client.connect(broker, port)
+			print(f"Connected to MQTT broker at {broker}:{port}")
+		except Exception as e:
+			print(f"Failed to connect to MQTT broker at {broker}:{port}")
 
 		try:
 			# line below should not have the () after the function!

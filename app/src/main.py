@@ -1,43 +1,27 @@
-from typing import Union
+import os
+import time
+from typing import Dict
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-from typing import Dict
-import time
 
-from stmpy import Machine, Driver
 from app import App
 from mqtt_client import MQTT_Client
+from stmpy import Machine, Driver
 
-import logging
-import sys
-
-#
-
-# Enable logging
-logger = logging.getLogger('uvicorn.error')
+# --- Logging Setup ---
+logger = logging.getLogger("uvicorn.error")
 logger.setLevel(logging.DEBUG)
 
-# App
+# Configure console handler with formatter
+if not logger.handlers:
+    console_handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+# --- FastAPI App Setup ---
 app = FastAPI()
-
-# Logging
-logger = logging.getLogger(__name__)
-
-#### handler ####
-console_handler = logging.StreamHandler()
-# we need addHandler to combine handler with logger
-logger.addHandler(console_handler)
-
-#### formatter ####
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(message)s"
- )
-# we need setFormatter to combine handler with handler
-console_handler.setFormatter(formatter)
-
-# uvicorn.run(app, host='0.0.0.0', port=8000)
-
 
 # Disable CORS
 app.add_middleware(
@@ -48,31 +32,31 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+# --- Global Variables ---
+broker = os.getenv("MQTT_BROKER")
+port = int(os.getenv("MQTT_PORT", "8883"))
+username = os.getenv("MQTT_USER", "scooter_app")
+password = os.getenv("MQTT_PASS", "")
 
-
-# TODO: Move
-
-knjgds = None
+# TODO: Refactor
+# This only works with 1 active user as it is a mock-up
+backend = None
 driver = None
-broker, port = "localhost", 8883
-username, password = "scooter_app", "Powerpuffs100"
 
-############# API
+# --- API ---
 @app.post("/available")
 async def get_available_scooters(data: Dict):
-    global knjgds, driver
+    global backend, driver
 
-    # logger.debug(data)
-
-    if(knjgds):
-        return knjgds.scooters
+    if(backend):
+        return backend.scooters
     
     ##### 
     id = data["user_id"]
     loc = data["location"]
 
     myclient = MQTT_Client(id, username, password)
-    knjgds = App(myclient, id, loc)
+    backend = App(myclient, id, loc)
 
     # Scooter state machine
     transitions = [
@@ -91,8 +75,8 @@ async def get_available_scooters(data: Dict):
         {'name':'locking', 'entry':'on_enter_locking', 'exit':'on_exit_locking'},
     ]
 
-    app_stm = Machine(transitions=transitions, states=states, obj=knjgds, name="app")
-    knjgds.stm = app_stm
+    app_stm = Machine(transitions=transitions, states=states, obj=backend, name="app")
+    backend.stm = app_stm
 
     driver = Driver()
     driver.add_machine(app_stm)
@@ -103,12 +87,15 @@ async def get_available_scooters(data: Dict):
     # Start
     driver.start()
     myclient.start(broker, port)
-    # driver.stop()
 
-    time.sleep(2)
-        
-    hasDriver = True
-    return knjgds.scooters
+    # Wait for results and return them
+    # while True:
+    #     if len(backend.scooters) > 0:
+    #         break
+    #     print("Searching for scooters...")
+    time.sleep(3)
+    
+    return backend.scooters
 
     
 @app.post("/choose_scooter")
@@ -116,12 +103,12 @@ async def choose_scooter(data: Dict):
     driver.send("choose_scooter", "app", kwargs=data)
     return {"ACK":"ACK"}
 
-    
+
 @app.get("/bac")
 async def choose_scooter():
-    if(knjgds.checksum == 10):
+    if(backend.checksum == 10):
         return {"status": 1}
-    if(knjgds.last_test == 0):
+    if(backend.last_test == 0):
         return {"status": 0}
     return {"status": -1}
 

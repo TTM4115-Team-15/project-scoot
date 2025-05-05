@@ -1,3 +1,4 @@
-flask[standard]
+fastapi[standard]
+uvicorn[standard]
 paho-mqtt
 stmpy
