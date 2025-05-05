@@ -1,3 +1,6 @@
 [submodule "scooter"]
 	path = scooter
 	url = https://github.com/TTM4115-Team-15/scooter
+[submodule "app/frontend"]
+	path = app/frontend
+	url = https://github.com/TTM4115-Team-15/mock-frontend.git
