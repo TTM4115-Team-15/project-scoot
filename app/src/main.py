@@ -47,7 +47,7 @@ driver = None
 async def get_available_scooters(data: Dict):
     global backend, driver
 
-    if(backend and len(backend.scooters > 0)):
+    if(backend and len(backend.scooters) > 0):
         # This can cause some issues if the frontend is "out of sync"
         print("Returning cache: {backend.scooters}")
         return backend.scooters

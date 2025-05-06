@@ -1,12 +1,9 @@
 import json
 import paho.mqtt.client as mqtt
-
-from stmpy import Machine, Driver
 from threading import Thread
 
 class MQTT_Client:
 	def __init__(self, id, username, password):
-		self.count = 0
 		self.id = id
 		
 		self.username = username
@@ -20,21 +17,20 @@ class MQTT_Client:
 		self.client.username_pw_set(username, password)
 
 	def on_connect(self, client, userdata, flags, rc):
-		print("on_connect(): {}".format(mqtt.connack_string(rc)))
+		print(f"on_connect(): {mqtt.connack_string(rc)}")
 		client.subscribe("choose_scooter")
 		client.subscribe("lock_btn")
 		client.publish("debug/app", f"Connected with ID {self.id}")
 
 	def on_message(self, client, userdata, msg):
-		print("on_message(): {}".format(msg.topic))
+		print(f"MQTT topic recieved: {msg.topic}")
 
 		msg_type = msg.topic.split("/")[0]
 		payload = json.loads(msg.payload.decode("utf-8"))
 		
 		kwargs = {}
 		if(msg_type == "available"):
-			print("payload: ", payload)
-			kwargs = { 
+			kwargs = {
 				's_id':payload["s_id"],
 				'loc':payload["loc"]
 			}
@@ -47,19 +43,21 @@ class MQTT_Client:
 			}
 
 		if(msg_type == "unlock"):
+			print("Payload: ", payload)
 			status = payload["status"]
 			if(status == 1):
 				# success
 				msg_type = "unlock_ack"
+				print("Unlocking succeeded")
 			if(status == 2):
 				# fail
 				msg_type = "unlock_fail"
-			print("Unlocking: ", status)
+				print("Unlocking failed")
 
 		self.stm_driver.send(msg_type, "app", kwargs=kwargs)
 
 	def start(self, broker, port):
-		print("Connecting to {}:{}".format(broker, port))
+		print(f"Connecting to {broker}:{port}")
 
 		try:
 			self.client.connect(broker, port)
@@ -70,6 +68,6 @@ class MQTT_Client:
 		try:
 			thread = Thread(target=self.client.loop_forever)
 			thread.start()
-		except Exception:
+		except:
 			print("Interrupted")
 			self.client.disconnect()

@@ -9,10 +9,12 @@ class App:
 		# TODO: Consider making this None to couple at same time as stm_driver
 		self.mqtt_client = mqtt_client
 		self.scooters = []
+
+		# Used by the translation layer
 		self.last_test = 0
 		self.checksum = 0
 
-		self.driver = None
+		self.instance = None
 
 	################
 	# MQTT Wrapper #
@@ -33,6 +35,14 @@ class App:
 		'''Print debug messages'''
 		print(f"[App {self.id}] {msg}")
 		
+	def add_scooter(self, s_id, loc):
+		self.scooters.append({"s_id": s_id, "loc": loc})
+		self.log(f"ID: {s_id}, loc: {loc}")
+
+	def save_scooter_id(self, s_id):
+		self.log(f"Saving ID: {s_id}")
+		self.active_scooter = s_id
+		
 	###############
 	# Transitions #
 	###############
@@ -46,20 +56,25 @@ class App:
 			"loc": self.pos
 		})
 
+		
+		self.last_test = 0
+		self.checksum = 0
+
 	def on_exit_list_scooter(self):
 		self.unsubscribe(f"available/{self.id}/res")
 
+	# TODO: Start timer/use scooters last will to reset app on disconnect
 	def on_enter_reserving(self):
-		self.log(f"Reserving: {self.active_scooter}")
-
+		self.log(f"Reserving scooter {self.active_scooter}")
 		self.subscribe(f"unlock/{self.active_scooter}/res")
 		self.publish(f"unlock/{self.active_scooter}", {
 			"user_id": self.id
 		})
+		
+		self.last_test = -1
 
-	def on_enter_breathalyzer(self):
-		# TODO: Start timer/use scooters last will to reset app 
-		self.unsubscribe(f"unlock/{self.active_scooter}")
+	def on_exit_breathalyzer(self):
+		self.unsubscribe(f"unlock/{self.active_scooter}/res")
 
 	def on_enter_locking(self):
 		self.subscribe(f"lock/{self.active_scooter}/res")
@@ -68,41 +83,38 @@ class App:
 	def on_exit_locking(self):
 		self.unsubscribe(f"lock/{self.active_scooter}/res")
 
-	def add_scooter(self, s_id, loc):
-		self.scooters.append({"s_id": s_id, "loc": loc})
-		self.log(f"ID: {s_id}, loc: {loc}")
-
-	def save_scooter_id(self, s_id):
-		self.log(f"Saving ID: {s_id}")
-		self.active_scooter = s_id
+	def on_enter_riding(self):
+		self.checksum = 10
 
 	##########
 	# Driver #
 	##########
 	def get_driver(self):
-		if self.driver:
-			return self.driver
+		if self.instance:
+			return self.instance
 
 		transitions = [
 			{'source':'initial', 'target':'list scooters'},
 			{'trigger':'choose_scooter', 'source':'list scooters', 'target':'reserving', 'effect':'save_scooter_id(*)'},
 			{'trigger':'unlock', 'source':'reserving', 'target':'breathalyzer', 'effect':'log("Confirmed scooter reservation")'},
-			{'trigger':'unlock_ack', 'source':'breathalyzer', 'target':'riding', 'effect':'log("Unlocked scooter!")'},
+			{'trigger':'unlock_ack', 'source':'breathalyzer', 'target':'riding', 'effect':'log("Ride started")'},
 			{'trigger':'unlock_fail', 'source':'breathalyzer', 'target':'list scooters', 'effect':'log("Failed bac test!")'},
 			{'trigger':'lock_btn', 'source':'riding', 'target':'locking', 'effect':'log("Locking scooter")'},
-			{'trigger':'lock', 'source':'locking', 'target':'list scooters', 'effect':'log("Locked scooter")'}
+			{'trigger':'lock', 'source':'locking', 'target':'list scooters', 'effect':'log("Ride ended")'}
 		]
 
 		states = [
 			{'name':'list scooters', 'entry':'on_enter_list_scooters', 'exit':'on_exit_list_scooter', 'available':'add_scooter(*)'},
+			{'name':'breathalyzer', 'exit':'on_exit_breathalyzer'},
 			{'name':'reserving', 'entry':'on_enter_reserving'},
 			{'name':'locking', 'entry':'on_enter_locking', 'exit':'on_exit_locking'},
+        	{'name':'riding', 'entry':'on_enter_riding'},
 		]
 
 		stm = Machine(transitions=transitions, states=states, obj=self, name="app")
 
 		driver = Driver()
 		driver.add_machine(stm)
-		self.driver = driver
+		self.instance = driver
 
-		return self.driver
+		return self.instance
