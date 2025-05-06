@@ -51,37 +51,15 @@ async def get_available_scooters(data: Dict):
     if(backend):
         return backend.scooters
     
-    ##### 
+    # Set up instance
     id = data["user_id"]
     loc = data["location"]
 
     myclient = MQTT_Client(id, username, password)
     backend = App(myclient, id, loc)
 
-    # Scooter state machine
-    transitions = [
-        {'source':'initial', 'target':'list scooters', 'effect':'log("A")'},
-        {'trigger':'choose_scooter', 'source':'list scooters', 'target':'reserving', 'effect':'save_scooter_id(*)'},
-        {'trigger':'unlock', 'source':'reserving', 'target':'breathalyzer', 'effect':'log("Confirmed scooter reservation")'},
-        {'trigger':'unlock_ack', 'source':'breathalyzer', 'target':'riding', 'effect':'log("Unlocked scooter!")'},
-        {'trigger':'unlock_fail', 'source':'breathalyzer', 'target':'list scooters', 'effect':'log("Failed bac test!")'},
-        {'trigger':'lock_btn', 'source':'riding', 'target':'locking', 'effect':'log("Locking scooter")'},
-        {'trigger':'lock', 'source':'locking', 'target':'list scooters', 'effect':'log("Locked scooter")'}
-    ]
-
-    states = [
-        {'name':'list scooters', 'entry':'on_enter_list_scooters', 'exit':'on_exit_list_scooter', 'available':'add_scooter(*)'},
-        {'name':'reserving', 'entry':'on_enter_reserving'},
-        {'name':'locking', 'entry':'on_enter_locking', 'exit':'on_exit_locking'},
-    ]
-
-    app_stm = Machine(transitions=transitions, states=states, obj=backend, name="app")
-    backend.stm = app_stm
-
-    driver = Driver()
-    driver.add_machine(app_stm)
-
     # MQTT Client coupling
+    driver = backend.get_driver()
     myclient.stm_driver = driver
 
     # Start
@@ -89,11 +67,11 @@ async def get_available_scooters(data: Dict):
     myclient.start(broker, port)
 
     # Wait for results and return them
-    # while True:
-    #     if len(backend.scooters) > 0:
-    #         break
-    #     print("Searching for scooters...")
-    time.sleep(3)
+    while True:
+        if len(backend.scooters) > 0:
+            break
+        print("Searching for scooters...")
+        time.sleep(0.5)
     
     return backend.scooters
 

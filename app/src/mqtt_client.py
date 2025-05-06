@@ -26,8 +26,7 @@ class MQTT_Client:
 		client.publish("debug/app", f"Connected with ID {self.id}")
 
 	def on_message(self, client, userdata, msg):
-		print("on_message(): topic: {}".format(msg.topic))
-		print(msg.topic.split("/"))
+		print("on_message(): {}".format(msg.topic))
 
 		msg_type = msg.topic.split("/")[0]
 		payload = json.loads(msg.payload.decode("utf-8"))
@@ -61,7 +60,6 @@ class MQTT_Client:
 
 	def start(self, broker, port):
 		print("Connecting to {}:{}".format(broker, port))
-		# self.client.connect(broker, port)
 
 		try:
 			self.client.connect(broker, port)
@@ -76,9 +74,3 @@ class MQTT_Client:
 		except KeyboardInterrupt:
 			print("Interrupted")
 			self.client.disconnect()
-
-		# try:
-		# 	self.client.loop_forever()
-		# except KeyboardInterrupt:
-		# 	print("Interrupted")
-		# 	self.client.disconnect()

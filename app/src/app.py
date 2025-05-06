@@ -1,4 +1,5 @@
 import json
+from stmpy import Machine, Driver
 
 ##
 class App:
@@ -10,6 +11,8 @@ class App:
 		self.scooters = []
 		self.last_test = 0
 		self.checksum = 0
+
+		self.driver = None
 
 	################
 	# MQTT Wrapper #
@@ -34,20 +37,14 @@ class App:
 	# States #
 	##########
 	def on_enter_list_scooters(self):
-		# TODO: Clean up
 		while not self.mqtt_client.client.is_connected():
 			self.mqtt_client.client.loop()
 
 		self.subscribe(f"available/{self.id}/res")
 		self.publish("available", {
 			"user_id": self.id,
-			"loc": self.pos # TODO: custom
+			"loc": self.pos
 		})
-
-		self.log(f"Last test from {self.last_test}")
-		self.last_test = 0
-		self.checksum = 0
-		self.log(f"Last test to {self.last_test}")
 
 	def on_exit_list_scooter(self):
 		self.unsubscribe(f"available/{self.id}/res")
@@ -58,14 +55,14 @@ class App:
 
 	def on_enter_reserving(self):
 		self.log(f"Reserving: {self.active_scooter}")
-		
+
 		self.subscribe(f"unlock/{self.active_scooter}/res")
 		self.publish(f"unlock/{self.active_scooter}", {
 			"user_id": self.id
 		})
 
 	def on_enter_breathalyzer(self):
-		# TODO: Start timer! (20 seconds?)
+		# TODO: Start timer/use last will
 		self.unsubscribe(f"unlock/{self.active_scooter}")
 
 	def on_enter_locking(self):
@@ -78,3 +75,31 @@ class App:
 	def save_scooter_id(self, s_id):
 		self.log(f"Saving ID: {s_id}")
 		self.active_scooter = s_id
+
+	##########
+	# Driver #
+	##########
+	def get_driver(self):
+		if self.driver:
+			return self.driver
+
+		transitions = [
+			{'source':'initial', 'target':'available'},
+			{'trigger':'unlock', 'source':'available', 'target':'reserved', 'effect':'on_enter_reserved(*)'},
+			{'trigger':'BAC_fail', 'source':'reserved', 'target':'available', 'effect':'send_bac(False)'},
+			{'trigger':'BAC_success', 'source':'reserved', 'target':'riding', 'effect':'send_bac(True)'},
+			{'trigger':'lock', 'source':'riding', 'target':'available'},
+		]
+
+		states = [
+			{'name':'available', 'entry':'on_enter_available', 'exit':'on_exit_available', 'available':'geo_check_distance(*)'},
+			{'name':'riding', 'entry':'on_enter_riding', 'exit':'on_exit_riding'},
+		]
+
+		stm = Machine(transitions=transitions, states=states, obj=self, name="scooter")
+
+		driver = Driver()
+		driver.add_machine(stm)
+		self.driver = driver
+
+		return self.driver

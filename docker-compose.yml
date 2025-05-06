@@ -13,8 +13,6 @@ services:
       - /mosquitto/data
     environment:
       - TZ=UTC
-    networks:
-      - backend
   app:
     build: ./app
     container_name: app-backend
@@ -22,11 +20,6 @@ services:
       - 8000:8000
     environment:
       - MQTT_BROKER=192.168.1.76
-    networks:
-      - backend
   # scooter:
   #   build: ./scooter
   #   container_name: scooter-420
-
-networks:
-  backend:
