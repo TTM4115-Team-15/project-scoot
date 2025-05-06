@@ -35,22 +35,19 @@ class MQTT_Client:
 				'loc':payload["loc"]
 			}
 
-		# Debug -> Move to app frontend
-		if(msg_type == "choose_scooter"):
-			print("Choosing scooter: ", payload)
-			kwargs = { 
-				's_id':payload["s_id"]
-			}
+		# # TODO: Move to frontend
+		# if(msg_type == "choose_scooter"):
+		# 	print("Clicked scooter ", payload["s_id"])
+		# 	kwargs = { 
+		# 		's_id':payload["s_id"]
+		# 	}
 
 		if(msg_type == "unlock"):
-			print("Payload: ", payload)
 			status = payload["status"]
-			if(status == 1):
-				# success
+			if(status == 1): # success
 				msg_type = "unlock_ack"
 				print("Unlocking succeeded")
-			if(status == 2):
-				# fail
+			if(status == 2): # fail
 				msg_type = "unlock_fail"
 				print("Unlocking failed")
 

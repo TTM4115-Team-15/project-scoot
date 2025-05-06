@@ -9,12 +9,10 @@ class App:
 		# TODO: Consider making this None to couple at same time as stm_driver
 		self.mqtt_client = mqtt_client
 		self.scooters = []
-
-		# Used by the translation layer
-		self.last_test = 0
-		self.checksum = 0
-
 		self.instance = None
+
+		# Used by the app UI (frontend)
+		self.ui_state = 0
 
 	################
 	# MQTT Wrapper #
@@ -56,9 +54,8 @@ class App:
 			"loc": self.pos
 		})
 
-		
-		self.last_test = 0
-		self.checksum = 0
+		# UI shows "Failed BAC"
+		self.ui_state = 0
 
 	def on_exit_list_scooter(self):
 		self.unsubscribe(f"available/{self.id}/res")
@@ -70,8 +67,9 @@ class App:
 		self.publish(f"unlock/{self.active_scooter}", {
 			"user_id": self.id
 		})
-		
-		self.last_test = -1
+
+		# UI shows "Running BAC"
+		self.ui_state = -1
 
 	def on_exit_breathalyzer(self):
 		self.unsubscribe(f"unlock/{self.active_scooter}/res")
@@ -84,7 +82,8 @@ class App:
 		self.unsubscribe(f"lock/{self.active_scooter}/res")
 
 	def on_enter_riding(self):
-		self.checksum = 10
+		# UI shows "Unlocking scooter"
+		self.ui_state = 1
 
 	##########
 	# Driver #

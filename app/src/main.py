@@ -68,11 +68,11 @@ async def get_available_scooters(data: Dict):
     myclient.start(broker, port)
 
     # Wait for results and return them
-    for _ in range(5): # Timeout after 5 seconds
+    for _ in range(10): # Timeout in 5 seconds
         if len(backend.scooters) > 0:
             break
         print("Searching for scooters...")
-        time.sleep(1)
+        time.sleep(0.5)
     
     return backend.scooters
 
@@ -85,11 +85,7 @@ async def choose_scooter(data: Dict):
 
 @app.get("/bac")
 async def choose_scooter():
-    if(backend.checksum == 10):
-        return {"status": 1}
-    if(backend.last_test == 0):
-        return {"status": 0}
-    return {"status": -1}
+    return {"status": backend.ui_state}
 
 
 @app.get("/lock")
