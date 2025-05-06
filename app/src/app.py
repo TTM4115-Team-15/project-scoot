@@ -6,7 +6,7 @@ class App:
 	def __init__(self, mqtt_client, id, pos):
 		self.id = id
 		self.pos = pos
-		# Consider making this null to couple at same time as stm_driver
+		# TODO: Consider making this None to couple at same time as stm_driver
 		self.mqtt_client = mqtt_client
 		self.scooters = []
 		self.last_test = 0
@@ -62,7 +62,7 @@ class App:
 		})
 
 	def on_enter_breathalyzer(self):
-		# TODO: Start timer/use last will
+		# TODO: Start timer/use scooters last will to reset app 
 		self.unsubscribe(f"unlock/{self.active_scooter}")
 
 	def on_enter_locking(self):

@@ -7,7 +7,6 @@ import logging
 
 from app import App
 from mqtt_client import MQTT_Client
-from stmpy import Machine, Driver
 
 # --- Logging Setup ---
 logger = logging.getLogger("uvicorn.error")
@@ -43,7 +42,7 @@ password = os.getenv("MQTT_PASS", "")
 backend = None
 driver = None
 
-# --- API ---
+# --- Translation Layer ---
 @app.post("/available")
 async def get_available_scooters(data: Dict):
     global backend, driver

@@ -23,3 +23,7 @@ services:
   scooter:
     build: ./scooter
     container_name: scooter-420
+  frontend:
+    build: ./frontend
+    container_name: app-frontend
+    network_mode: host

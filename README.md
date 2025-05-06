@@ -1,8 +1,5 @@
-# project-scoot
+# Project Scoot
+The main files are:
 
-
-## App
-Install flask
-Run with flask
-
-`fastapi dev main.py --host 0.0.0.0`
+- `scooter/scooter.py`
+- `app/src/app.py`
