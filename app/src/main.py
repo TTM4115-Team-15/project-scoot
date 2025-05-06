@@ -32,7 +32,7 @@ app.add_middleware(
 )
 
 # --- Global Variables ---
-broker = os.getenv("MQTT_BROKER")
+broker = os.getenv("MQTT_BROKER", "localhost")
 port = int(os.getenv("MQTT_PORT", "8883"))
 username = os.getenv("MQTT_USER", "scooter_app")
 password = os.getenv("MQTT_PASS", "")
@@ -47,7 +47,9 @@ driver = None
 async def get_available_scooters(data: Dict):
     global backend, driver
 
-    if(backend):
+    if(backend and len(backend.scooters > 0)):
+        # This can cause some issues if the frontend is "out of sync"
+        print("Returning cache: {backend.scooters}")
         return backend.scooters
     
     # Set up instance
@@ -66,11 +68,11 @@ async def get_available_scooters(data: Dict):
     myclient.start(broker, port)
 
     # Wait for results and return them
-    while True:
+    for _ in range(5): # Timeout after 5 seconds
         if len(backend.scooters) > 0:
             break
         print("Searching for scooters...")
-        time.sleep(0.5)
+        time.sleep(1)
     
     return backend.scooters
 

@@ -68,9 +68,8 @@ class MQTT_Client:
 			print(f"Failed to connect to MQTT broker at {broker}:{port}")
 
 		try:
-			# line below should not have the () after the function!
 			thread = Thread(target=self.client.loop_forever)
 			thread.start()
-		except KeyboardInterrupt:
+		except Exception:
 			print("Interrupted")
 			self.client.disconnect()
